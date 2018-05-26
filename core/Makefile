@@ -1427,7 +1427,6 @@ RECOVERYIMAGE_ID_FILE := $(PRODUCT_OUT)/recovery.id
 define build-recoveryimage-target
   # Making recovery image
 define build-recoveryramdisk
-  @echo "Generating Changelog"
   $(hide) ./vendor/venom/tools/changelog.sh
   $(hide) mv $(PRODUCT_OUT)/Changelog.txt $(PRODUCT_OUT)/$(TARGET_PRODUCT)-Changelog.txt
   @echo ----- Making recovery image ------
@@ -1667,6 +1666,8 @@ endif
 
 # $(1): output file
 define build-systemimage-target
+  $(hide) ./vendor/venom/tools/changelog.sh
+  $(hide) mv $(PRODUCT_OUT)/Changelog.txt $(PRODUCT_OUT)/$(CUSTOM_VERSION)-Changelog.txt
   @echo "Target system fs image: $(1)"
   $(call create-system-vendor-symlink)
   $(call create-system-product-symlink)
