@@ -2400,83 +2400,11 @@ define read-size-of-partitions
 $(foreach p,$(1),$(call read-image-prop-dictionary,$($(p)image_intermediates)/generated_$(p)_image_info.txt,$(p)_size))
 endef
 
-ifeq (true,$(PRODUCT_BUILD_SUPER_PARTITION))
+else ifdef BOARD_PREBUILT_VBMETAIMAGE
+INSTALLED_VBMETAIMAGE_TARGET := $(PRODUCT_OUT)/vbmeta.img
+$(eval $(call copy-one-file,$(BOARD_PREBUILT_VBMETAIMAGE),$(INSTALLED_VBMETAIMAGE_TARGET)))
 
-# BOARD_SUPER_PARTITION_SIZE must be defined to build super image.
-ifdef BOARD_SUPER_PARTITION_SIZE
-
-INSTALLED_SUPERIMAGE_TARGET := $(PRODUCT_OUT)/super.img
-$(INSTALLED_SUPERIMAGE_TARGET): $(call image-for-partitions,$(BOARD_SUPER_PARTITION_PARTITION_LIST))
-
-# For A/B devices, super partition always contains sub-partitions in the _a slot, because this
-# image should only be used for bootstrapping / initializing the device. When flashing the image,
-# bootloader fastboot should always mark _a slot as bootable.
-ifeq ($(AB_OTA_UPDATER),true)
-$(INSTALLED_SUPERIMAGE_TARGET): PRIVATE_PARTITION_SUFFIX=_a
-$(INSTALLED_SUPERIMAGE_TARGET): PRIVATE_METADATA_SLOTS=2
-else
-$(INSTALLED_SUPERIMAGE_TARGET): PRIVATE_METADATA_SLOTS=1
-endif # AB_OTA_UPDATER
-
-
-$(INSTALLED_SUPERIMAGE_TARGET): $(HOST_OUT_EXECUTABLES)/lpmake
-	$< \
-		--sparse \
-		--metadata-size 65536 \
-		--metadata-slots $(PRIVATE_METADATA_SLOTS) \
-		--device-size $(BOARD_SUPER_PARTITION_SIZE) \
-		--output $@ \
-		$(foreach name,$(BOARD_SUPER_PARTITION_PARTITION_LIST), \
-			--partition $(name)$(PRIVATE_PARTITION_SUFFIX):$$($(UUIDGEN) $(name)$(PRIVATE_PARTITION_SUFFIX)):readonly:$(call read-size-of-partitions,$(name)) \
-			--image $(name)$(PRIVATE_PARTITION_SUFFIX)=$(call image-for-partitions,$(name)))
-
-$(call dist-for-goals,dist_files,$(INSTALLED_SUPERIMAGE_TARGET))
-
-endif # BOARD_SUPER_PARTITION_SIZE
-endif # PRODUCT_BUILD_SUPER_PARTITION
-
-# -----------------------------------------------------------------
-# Check image sizes <= size of super partition
-
-ifeq (,$(TARGET_BUILD_APPS))
-# Do not check for apps-only build
-
-ifeq (true,$(PRODUCT_BUILD_SUPER_PARTITION))
-ifdef BOARD_SUPER_PARTITION_SIZE
-ifdef BOARD_SUPER_PARTITION_PARTITION_LIST
-
-droid_targets: check_android_partition_sizes
-
-.PHONY: check_android_partition_sizes
-
-# BOARD_SUPER_PARTITION_PARTITION_LIST: a list of the following tokens
-valid_super_partition_list := system vendor product productservices
-ifneq (,$(filter-out $(valid_super_partition_list),$(BOARD_SUPER_PARTITION_PARTITION_LIST)))
-$(error BOARD_SUPER_PARTITION_PARTITION_LIST contains invalid partition name. \
-        Valid names are $(valid_super_partition_list).)
-endif
-valid_super_partition_list :=
-
-# Add image dependencies so that generated_*_image_info.txt are written before checking.
-check_android_partition_sizes: $(call image-for-partitions,$(BOARD_SUPER_PARTITION_PARTITION_LIST))
-
-check_android_partition_sizes:
-	partition_size_list="$(call read-size-of-partitions,$(BOARD_SUPER_PARTITION_PARTITION_LIST))"; \
-	sum_sizes_expr=$$(sed -e 's/ /+/g' <<< "$${partition_size_list}"); \
-	if [ $$(( $${sum_sizes_expr} )) -gt $(BOARD_SUPER_PARTITION_SIZE) ]; then \
-		echo 'The sum of sizes of all logical partitions is larger than BOARD_SUPER_PARTITION_SIZE.'; \
-		echo $${sum_sizes_expr} '==' $$(( $${sum_sizes_expr} )) '>' $(BOARD_SUPER_PARTITION_SIZE); \
-		exit 1; \
-	else \
-		echo 'The sum of sizes of all logical partitions is within BOARD_SUPER_PARTITION_SIZE:' \
-		    $${sum_sizes_expr} '==' $$(( $${sum_sizes_expr} )) '<=' $(BOARD_SUPER_PARTITION_SIZE); \
-	fi
-
-endif # BOARD_SUPER_PARTITION_PARTITION_LIST
-endif # BOARD_SUPER_PARTITION_SIZE
-endif # PRODUCT_BUILD_SUPER_PARTITION
-
-endif # TARGET_BUILD_APPS
+endif # BOARD_AVB_ENABLE
 
 # -----------------------------------------------------------------
 # bring in the installer image generation defines if necessary
@@ -2989,6 +2917,19 @@ endif
 ifeq ($(BREAKPAD_GENERATE_SYMBOLS),true)
 	@# If breakpad symbols have been generated, add them to the zip.
 	$(hide) $(ACP) -r $(TARGET_OUT_BREAKPAD) $(zip_root)/BREAKPAD
+endif
+	$(hide) echo "ota_override_device=$(OTA_SCRIPT_OVERRIDE_DEVICE)" >> $(zip_root)/META/misc_info.txt
+# BOARD_BUILD_DISABLED_VBMETAIMAGE is used to build a special vbmeta.img
+# that disables AVB verification. The content is fixed and we can just copy
+# it to $(zip_root)/IMAGES without passing some info into misc_info.txt for
+# regeneration.
+ifeq (true,$(BOARD_BUILD_DISABLED_VBMETAIMAGE))
+	$(hide) mkdir -p $(zip_root)/IMAGES
+	$(hide) cp $(INSTALLED_VBMETAIMAGE_TARGET) $(zip_root)/IMAGES/
+endif
+ifdef BOARD_PREBUILT_VBMETAIMAGE
+	$(hide) mkdir -p $(zip_root)/IMAGES
+	$(hide) cp $(INSTALLED_VBMETAIMAGE_TARGET) $(zip_root)/IMAGES/
 endif
 ifdef BOARD_PREBUILT_VENDORIMAGE
 	$(hide) mkdir -p $(zip_root)/IMAGES
