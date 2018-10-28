@@ -561,24 +561,25 @@ function add_lunch_combo()
 function print_lunch_menu()
 {
     local uname=$(uname)
-    echo
+
     echo "You're building on" $uname
     if [ "$(uname)" = "Darwin" ] ; then
        echo "  (ohai, Ibish!)"
     fi
     echo
     if [ "z${VENOM_DEVICES_ONLY}" != "z" ]; then
-       echo "Breakfast menu... pick a combo:"
+        echo "Breakfast menu... pick a combo:"
     else
-    echo "Lunch menu... pick a combo:"
+        echo "Lunch menu... pick a combo:"
+    fi
 
     local i=1
     local choice
     for choice in ${LUNCH_MENU_CHOICES[@]}
     do
-        echo "     $i. $choice"
+        echo "$i. $choice"
         i=$(($i+1))
-    done
+    done| column
 
     if [ "z${VENOM_DEVICES_ONLY}" != "z" ]; then
        echo " "
