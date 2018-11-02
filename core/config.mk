@@ -1149,7 +1149,7 @@ endif
 ifneq ($(CUSTOM_BUILD),)
 ## We need to be sure the global selinux policies are included
 ## last, to avoid accidental resetting by device configs
-$(eval include device/aosp/sepolicy/common/sepolicy.mk)
+#$(eval include device/aosp/sepolicy/common/sepolicy.mk)
 
 # Include any vendor specific config.mk file
 -include $(TOPDIR)vendor/*/build/core/config.mk
@@ -1158,10 +1158,10 @@ $(eval include device/aosp/sepolicy/common/sepolicy.mk)
 -include $(TOPDIR)vendor/*/build/core/apicheck.mk
 
 # Rules for QCOM targets
--include $(TOPDIR)vendor/superior/build/core/qcom_target.mk
+-include $(TOPDIR)vendor/venom/build/core/qcom_target.mk
 
 # Rules for MTK targets
--include $(TOPDIR)vendor/superior/build/core/mtk_target.mk
+-include $(TOPDIR)vendor/venom/build/core/mtk_target.mk
 endif
 
 include $(BUILD_SYSTEM)/dumpvar.mk
