@@ -312,11 +312,6 @@ if __name__ == '__main__':
     else:
         deps_only = False
 
-<<<<<<< HEAD
-if __name__ == "__main__":
-    main()
-=======
     if not deps_only:
         fetch_device(device)
     fetch_dependencies(device)
->>>>>>> 57cd71826... base: tools: Roomservice Fix
